@@ -15,3 +15,149 @@ button {
   background: #18181b; color: #e5e5e5; border: 1px solid #27272a;
   border-radius: 8px; padding: .5rem .75rem;
 }
+
+/* --- ProjectSensei base (safe to append) ------------------------------ */
+:root {
+  --ps-bg: #0c0c0c;
+  --ps-card: #151515;
+  --ps-muted: #b6b6b6;
+  --ps-text: #f4f4f5;
+  --ps-brand: #e53935;   /* red accent */
+  --ps-line: #242424;
+}
+
+html, body {
+  background: var(--ps-bg);
+  color: var(--ps-text);
+}
+
+.ps-shell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.ps-header, .ps-footer {
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ps-brand {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  letter-spacing: 0.3px;
+  font-weight: 600;
+}
+
+.ps-logo {
+  color: var(--ps-brand);
+  font-weight: 800;
+}
+
+.ps-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ps-pill {
+  border: 1px solid var(--ps-line);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--ps-muted);
+}
+
+.ps-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 24px;
+}
+
+.ps-card {
+  background: var(--ps-card);
+  border: 1px solid var(--ps-line);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.ps-card-xl {
+  padding: 28px;
+}
+
+.ps-title {
+  font-size: 24px;
+  margin: 0 0 6px;
+}
+
+.ps-muted {
+  margin: 0 0 18px;
+  color: var(--ps-muted);
+}
+
+.ps-btn, .ps-btn-outline {
+  appearance: none;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ps-btn {
+  background: var(--ps-brand);
+  color: white;
+}
+
+.ps-btn:hover { opacity: .95; }
+
+.ps-btn-outline {
+  background: transparent;
+  color: var(--ps-text);
+  border: 1px solid var(--ps-line);
+}
+
+.ps-btn-outline:hover { border-color: var(--ps-brand); color: var(--ps-brand); }
+
+.ps-grid {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ps-tile {
+  border: 1px solid var(--ps-line);
+  border-radius: 12px;
+  padding: 14px;
+  background: #101010;
+}
+
+.ps-tile h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.ps-link { color: var(--ps-brand); }
+
+.ps-footer {
+  color: var(--ps-muted);
+  font-size: 13px;
+  border-top: 1px solid var(--ps-line);
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  .ps-grid { grid-template-columns: 1fr; }
+}

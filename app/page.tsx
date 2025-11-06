@@ -1,91 +1,81 @@
-// app/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient'; // <- keep relative import to avoid path-alias issues
 
-type Session = {
-  user: { email?: string | null } | null;
-} | null;
-
-export default function HomePage() {
+export default function Dashboard() {
   const router = useRouter();
-  const [session, setSession] = useState<Session>(null);
+  const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Load current session on mount
   useEffect(() => {
-    let isMounted = true;
+    let alive = true;
 
-    async function init() {
-      const { data } = await supabase.auth.getSession();
-      if (!isMounted) return;
-      setSession(data.session ? { user: data.session.user } : null);
+    supabase.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      if (!data.session) {
+        router.replace('/login');
+      } else {
+        setEmail(data.session.user.email ?? null);
+      }
       setLoading(false);
-    }
+    });
 
-    // initial load
-    init();
-
-    // keep session in sync (login / logout)
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, _session) => {
-      setSession(_session ? { user: _session.user } : null);
+    // Keep UI in sync if auth state changes
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+      if (!session) {
+        router.replace('/login');
+      } else {
+        setEmail(session.user.email ?? null);
+      }
     });
 
     return () => {
-      isMounted = false;
-      sub.subscription?.unsubscribe();
+      alive = false;
+      sub.subscription.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
+  // Sign out handler
   async function handleSignOut() {
     await supabase.auth.signOut();
-    // optional: take them to /login after logout
-    router.push('/login');
+    router.replace('/login');
   }
 
   if (loading) {
     return (
-      <main className="ps-wrap">
-        <div className="ps-card">Loading…</div>
+      <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+        <p style={{ opacity: 0.7 }}>Loading…</p>
       </main>
     );
   }
 
-  // Not authenticated → gentle sign-in prompt
-  if (!session?.user) {
-    return (
-      <main className="ps-wrap">
-        <div className="ps-card">
-          <h1 className="ps-title">Please sign in</h1>
-          <p className="ps-muted">You’re not authenticated.</p>
-          <p><Link href="/login" className="ps-link">Go to Login</Link></p>
-        </div>
-      </main>
-    );
-  }
-
-  // Authenticated → simple dashboard
   return (
-    <main className="ps-wrap">
-      <header className="ps-header">
-        <div className="ps-brand">
-          <span className="ps-logo">&lt;/&gt;</span> ProjectSensei
-        </div>
-        <button onClick={handleSignOut} className="ps-btn">Sign out</button>
+    <main style={{ padding: '48px', maxWidth: 960, margin: '0 auto' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1 style={{ margin: 0 }}>ProjectSensei</h1>
+        <button
+          onClick={handleSignOut}
+          style={{
+            background: '#e33',
+            color: 'white',
+            border: 'none',
+            borderRadius: 8,
+            padding: '10px 14px',
+            cursor: 'pointer',
+          }}
+        >
+          Sign out
+        </button>
       </header>
 
-      <section className="ps-grid">
-        <div className="ps-card">
-          <h2 className="ps-h2">Welcome back</h2>
-          <p className="ps-muted">
-            Signed in as <strong>{session.user?.email ?? 'unknown'}</strong>
-          </p>
-          <p className="ps-help">
-            This is your protected home. You can add tiles, stats, or navigation here.
-          </p>
-        </div>
+      <section style={{ marginTop: 28 }}>
+        <p style={{ opacity: 0.8 }}>
+          Signed in as <strong>{email}</strong>
+        </p>
+        <p>Welcome back 👋 — your dashboard is ready.</p>
       </section>
     </main>
   );

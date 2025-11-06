@@ -1,105 +1,135 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
 
-export default function DashboardPage() {
-  const [email, setEmail] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+type UserInfo = { email: string | null };
 
-  // Fetch current user on mount + subscribe to auth changes
+export default function Home() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<UserInfo | null>(null);
+
   useEffect(() => {
     let mounted = true;
 
-    const init = async () => {
-      try {
-        const { data } = await supabase.auth.getUser();
-        if (mounted) setEmail(data.user?.email ?? null);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
+    async function load() {
+      // 1) get current session
+      const { data } = await supabase.auth.getSession();
+      const email = data.session?.user?.email ?? null;
 
+      if (!email) {
+        // not signed in → go to login
+        router.replace('/login');
+        return;
+      }
+
+      if (mounted) {
+        setUser({ email });
+        setLoading(false);
+      }
+    }
+
+    load();
+
+    // 2) react to future auth changes (optional, nice to have)
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setEmail(session?.user?.email ?? null);
+      const email = session?.user?.email ?? null;
+      if (!email) {
+        router.replace('/login');
+      } else {
+        setUser({ email });
+        setLoading(false);
+      }
     });
 
-    init();
     return () => {
       mounted = false;
-      sub.subscription?.unsubscribe();
+      sub.subscription.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
-  const handleSignOut = async () => {
+  async function signOut() {
     await supabase.auth.signOut();
-    // if middleware protects "/", this will redirect to /login automatically;
-    // otherwise we navigate explicitly:
-    window.location.href = '/login';
-  };
+    router.replace('/login');
+  }
 
-  // Very defensive: if no user (e.g., middleware not yet redirected), show a link.
-  if (!loading && !email) {
+  if (loading) {
     return (
-      <div className="ps-shell">
-        <div className="ps-card">
-          <h1 className="ps-title">Please sign in</h1>
-          <p className="ps-muted">You’re not authenticated.</p>
-          <Link className="ps-btn" href="/login">Go to Login</Link>
-        </div>
-      </div>
+      <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+        <p style={{ color: 'var(--ps-text)' }}>Loading your dashboard…</p>
+      </main>
     );
   }
 
   return (
-    <div className="ps-shell">
-      <header className="ps-header">
-        <div className="ps-brand">
-          <span className="ps-logo">&lt;/&gt;</span>
-          <span>ProjectSensei</span>
+    <div style={{ minHeight: '100vh', display: 'grid', gridTemplateRows: 'auto 1fr' }}>
+      {/* Header */}
+      <header
+        style={{
+          borderBottom: '1px solid var(--ps-line)',
+          padding: '16px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ color: 'var(--ps-brand)', fontWeight: 700 }}>{'</>'}</span>
+          <span style={{ fontWeight: 700, color: 'var(--ps-text)' }}>ProjectSensei</span>
         </div>
 
-        {email && (
-          <div className="ps-user">
-            <span className="ps-pill">{email}</span>
-            <button className="ps-btn-outline" onClick={handleSignOut}>
-              Sign out
-            </button>
-          </div>
-        )}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <span style={{ color: 'var(--ps-muted)', fontSize: 14 }}>{user?.email}</span>
+          <button onClick={signOut}>Sign out</button>
+        </div>
       </header>
 
-      <main className="ps-main">
-        <section className="ps-card ps-card-xl">
-          <h1 className="ps-title">Welcome 👋</h1>
-          <p className="ps-muted">
-            You’re signed in with <strong>{email ?? '...'}</strong>.
-          </p>
+      {/* Body */}
+      <main style={{ padding: 24 }}>
+        <h1 style={{ margin: '0 0 12px', color: 'var(--ps-text)' }}>Welcome 👋</h1>
+        <p style={{ color: 'var(--ps-muted)', marginBottom: 24 }}>
+          You’re signed in with <strong style={{ color: 'var(--ps-text)' }}>{user?.email}</strong>.
+        </p>
 
-          <div className="ps-grid">
-            <div className="ps-tile">
-              <h3>Next step</h3>
-              <p>Build the dashboard modules and AI hooks.</p>
-            </div>
-            <div className="ps-tile">
-              <h3>Account</h3>
-              <p>Use the button above to sign out safely.</p>
-            </div>
-            <div className="ps-tile">
-              <h3>Docs</h3>
-              <p>
-                <a className="ps-link" href="https://supabase.com/docs" target="_blank">Supabase</a>{' '}
-                · <a className="ps-link" href="https://nextjs.org/docs" target="_blank">Next.js</a>
-              </p>
-            </div>
+        {/* Example cards (placeholders you can replace later) */}
+        <section
+          style={{
+            display: 'grid',
+            gap: 16,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+          }}
+        >
+          <div
+            style={{
+              background: 'var(--ps-card)',
+              border: '1px solid var(--ps-line)',
+              borderRadius: 12,
+              padding: 16,
+            }}
+          >
+            <h3 style={{ marginTop: 0, color: 'var(--ps-text)' }}>Next steps</h3>
+            <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--ps-muted)' }}>
+              <li>Replace these cards with your app widgets</li>
+              <li>Wire real data (Supabase, APIs, etc.)</li>
+              <li>Add settings/profile pages</li>
+            </ul>
+          </div>
+
+          <div
+            style={{
+              background: 'var(--ps-card)',
+              border: '1px solid var(--ps-line)',
+              borderRadius: 12,
+              padding: 16,
+            }}
+          >
+            <h3 style={{ marginTop: 0, color: 'var(--ps-text)' }}>Status</h3>
+            <p style={{ color: 'var(--ps-muted)' }}>Auth is configured and working 🎉</p>
           </div>
         </section>
       </main>
-
-      <footer className="ps-footer">
-        <span>Build Fearlessly — Sensei Has You</span>
-      </footer>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { supabase } from '../lib/supabaseClient';
 
 type SimpleUser = {
-  email?: string | null;
+  email: string | null;
 };
 
 export default function DashboardPage() {
@@ -13,65 +13,86 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initial fetch
+    // 1) Initial fetch on mount
     const getUser = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      setUser(user ? { email: user.email } : null);
+      if (user) {
+        setUser({ email: user.email ?? null });
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     };
 
     getUser();
 
-    // Keep in sync with auth changes
-    const { data: subscription } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ? { email: session.user.email } : null);
+    // 2) Subscribe to auth changes (login / logout)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({ email: session.user.email ?? null });
+      } else {
+        setUser(null);
       }
-    );
+    });
 
+    // 3) Cleanup subscription on unmount
     return () => {
-      subscription.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    // Send them to login page after sign out
+    // Hard redirect to login to avoid stale UI
     window.location.href = '/login';
   };
 
-  // Loading state while we check the session
+  // ==============================
+  // UI STATES
+  // ==============================
+
+  // Loading while we check session
   if (loading) {
     return (
       <div className="ps-page">
         <div className="ps-shell">
           <header className="ps-header">
-            <div className="ps-logo">&lt;/&gt; ProjectSensei</div>
-          </header>
-          <main className="ps-main">
-            <div className="ps-card">
-              <p className="ps-muted">Checking your session…</p>
+            <div>
+              <div className="ps-logo">&lt;/&gt; ProjectSensei</div>
+              <p className="ps-tagline">Build fearlessly — Sensei has you.</p>
             </div>
+          </header>
+
+          <main className="ps-main">
+            <section className="ps-card">
+              <p className="ps-muted">Checking your session…</p>
+            </section>
           </main>
         </div>
       </div>
     );
   }
 
-  // If there is no user, show a friendly sign-in prompt
+  // Not authenticated → gentle sign-in prompt
   if (!user) {
     return (
       <div className="ps-page">
         <div className="ps-shell">
           <header className="ps-header">
-            <div className="ps-logo">&lt;/&gt; ProjectSensei</div>
+            <div>
+              <div className="ps-logo">&lt;/&gt; ProjectSensei</div>
+              <p className="ps-tagline">Build fearlessly — Sensei has you.</p>
+            </div>
           </header>
+
           <main className="ps-main">
-            <div className="ps-card">
+            <section className="ps-card ps-card-hero">
               <h1 className="ps-title">Please sign in</h1>
               <p className="ps-muted">
                 Your session has expired or you&apos;re not authenticated.
@@ -79,7 +100,7 @@ export default function DashboardPage() {
               <Link href="/login" className="ps-button">
                 Go to login
               </Link>
-            </div>
+            </section>
           </main>
         </div>
       </div>
@@ -95,6 +116,7 @@ export default function DashboardPage() {
             <div className="ps-logo">&lt;/&gt; ProjectSensei</div>
             <p className="ps-tagline">Build fearlessly — Sensei has you.</p>
           </div>
+
           <button
             onClick={handleSignOut}
             className="ps-button ps-button-ghost"
@@ -104,6 +126,7 @@ export default function DashboardPage() {
         </header>
 
         <main className="ps-main">
+          {/* Hero / welcome card */}
           <section className="ps-card ps-card-hero">
             <p className="ps-label">Signed in</p>
             <h1 className="ps-title">
@@ -112,11 +135,12 @@ export default function DashboardPage() {
             </h1>
             <p className="ps-muted">
               You&apos;re logged in with a secure magic-link session.
-              This dashboard is your starting point; we&apos;ll plug in
-              real project data in later phases.
+              This dashboard is your starting point; we&apos;ll plug in real
+              project data in later phases.
             </p>
           </section>
 
+          {/* Three info cards */}
           <section className="ps-grid">
             <div className="ps-card">
               <h2 className="ps-card-title">What&apos;s set up</h2>
@@ -132,7 +156,7 @@ export default function DashboardPage() {
               <ul className="ps-list">
                 <li>Connect this auth shell to your real app UI.</li>
                 <li>Add team / project views on top of this layout.</li>
-                <li>Wire role-based access once you need it.</li>
+                <li>Introduce role-based access once you need it.</li>
               </ul>
             </div>
 

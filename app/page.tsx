@@ -1,82 +1,151 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '../lib/supabaseClient'; // <- keep relative import to avoid path-alias issues
+import Link from 'next/link';
+import { supabase } from '../lib/supabaseClient';
 
-export default function Dashboard() {
-  const router = useRouter();
-  const [email, setEmail] = useState<string | null>(null);
+type SimpleUser = {
+  email?: string | null;
+};
+
+export default function DashboardPage() {
+  const [user, setUser] = useState<SimpleUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load current session on mount
   useEffect(() => {
-    let alive = true;
+    // Initial fetch
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!alive) return;
-      if (!data.session) {
-        router.replace('/login');
-      } else {
-        setEmail(data.session.user.email ?? null);
-      }
+      setUser(user ? { email: user.email } : null);
       setLoading(false);
-    });
+    };
 
-    // Keep UI in sync if auth state changes
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-      if (!session) {
-        router.replace('/login');
-      } else {
-        setEmail(session.user.email ?? null);
+    getUser();
+
+    // Keep in sync with auth changes
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ? { email: session.user.email } : null);
       }
-    });
+    );
 
     return () => {
-      alive = false;
-      sub.subscription.unsubscribe();
+      subscription.subscription.unsubscribe();
     };
-  }, [router]);
+  }, []);
 
-  // Sign out handler
-  async function handleSignOut() {
+  const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.replace('/login');
-  }
+    setUser(null);
+    // Send them to login page after sign out
+    window.location.href = '/login';
+  };
 
+  // Loading state while we check the session
   if (loading) {
     return (
-      <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-        <p style={{ opacity: 0.7 }}>Loading…</p>
-      </main>
+      <div className="ps-page">
+        <div className="ps-shell">
+          <header className="ps-header">
+            <div className="ps-logo">&lt;/&gt; ProjectSensei</div>
+          </header>
+          <main className="ps-main">
+            <div className="ps-card">
+              <p className="ps-muted">Checking your session…</p>
+            </div>
+          </main>
+        </div>
+      </div>
     );
   }
 
-  return (
-    <main style={{ padding: '48px', maxWidth: 960, margin: '0 auto' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0 }}>ProjectSensei</h1>
-        <button
-          onClick={handleSignOut}
-          style={{
-            background: '#e33',
-            color: 'white',
-            border: 'none',
-            borderRadius: 8,
-            padding: '10px 14px',
-            cursor: 'pointer',
-          }}
-        >
-          Sign out
-        </button>
-      </header>
+  // If there is no user, show a friendly sign-in prompt
+  if (!user) {
+    return (
+      <div className="ps-page">
+        <div className="ps-shell">
+          <header className="ps-header">
+            <div className="ps-logo">&lt;/&gt; ProjectSensei</div>
+          </header>
+          <main className="ps-main">
+            <div className="ps-card">
+              <h1 className="ps-title">Please sign in</h1>
+              <p className="ps-muted">
+                Your session has expired or you&apos;re not authenticated.
+              </p>
+              <Link href="/login" className="ps-button">
+                Go to login
+              </Link>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
-      <section style={{ marginTop: 28 }}>
-        <p style={{ opacity: 0.8 }}>
-          Signed in as <strong>{email}</strong>
-        </p>
-        <p>Welcome back 👋 — your dashboard is ready.</p>
-      </section>
-    </main>
+  // Authenticated dashboard
+  return (
+    <div className="ps-page">
+      <div className="ps-shell">
+        <header className="ps-header">
+          <div>
+            <div className="ps-logo">&lt;/&gt; ProjectSensei</div>
+            <p className="ps-tagline">Build fearlessly — Sensei has you.</p>
+          </div>
+          <button
+            onClick={handleSignOut}
+            className="ps-button ps-button-ghost"
+          >
+            Sign out
+          </button>
+        </header>
+
+        <main className="ps-main">
+          <section className="ps-card ps-card-hero">
+            <p className="ps-label">Signed in</p>
+            <h1 className="ps-title">
+              Welcome back,{' '}
+              <span className="ps-accent">{user.email}</span>
+            </h1>
+            <p className="ps-muted">
+              You&apos;re logged in with a secure magic-link session.
+              This dashboard is your starting point; we&apos;ll plug in
+              real project data in later phases.
+            </p>
+          </section>
+
+          <section className="ps-grid">
+            <div className="ps-card">
+              <h2 className="ps-card-title">What&apos;s set up</h2>
+              <ul className="ps-list">
+                <li>Supabase magic link authentication</li>
+                <li>Protected routes via middleware</li>
+                <li>Session-aware home dashboard</li>
+              </ul>
+            </div>
+
+            <div className="ps-card">
+              <h2 className="ps-card-title">Next steps</h2>
+              <ul className="ps-list">
+                <li>Connect this auth shell to your real app UI.</li>
+                <li>Add team / project views on top of this layout.</li>
+                <li>Wire role-based access once you need it.</li>
+              </ul>
+            </div>
+
+            <div className="ps-card">
+              <h2 className="ps-card-title">Session status</h2>
+              <p className="ps-muted">
+                You&apos;re authenticated via Supabase and running on Vercel.
+              </p>
+              <p className="ps-chip">Magic link active</p>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
   );
 }

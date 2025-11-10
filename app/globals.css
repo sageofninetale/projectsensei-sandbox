@@ -305,3 +305,16 @@ html, body {
   background: #ff4b4b;
   color: #050505;
 }
+
+.ps-logo-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.ps-subtitle {
+  font-size: 0.9rem;
+  color: #8b8b8b;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
